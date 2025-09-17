@@ -271,6 +271,8 @@ static void redisGetQual(Node *node, TupleDesc tupdesc, char **key,
 static char *process_redis_array(redisReply *reply, redis_table_type type);
 static void check_reply(redisReply *reply, redisContext *context,
 						int error_code, char *message, char *arg);
+static const char * pg_text_value_to_redis_text(const char * pg_text_value);
+static char * redis_text_value_to_pg_db_encoding(const char * redis_text);
 
 /*
  * Name we will use for the junk attribute that holds the redis key
@@ -1419,7 +1421,7 @@ redisIterateForeignScanMulti(ForeignScanState *node)
 					break;
 
 				case REDIS_REPLY_STRING:
-					data = reply->str;
+					data = redis_text_value_to_pg_db_encoding(reply->str);
 					found = true;
 					break;
 
@@ -1647,12 +1649,14 @@ redisGetQual(Node *node, TupleDesc tupdesc, char **key, char **value, bool *push
 		if (IsA(right, Const))
 		{
 			StringInfoData buf;
+			char * pg_value;
 
 			initStringInfo(&buf);
 
 			/* And get the column and value... */
 			*key = NameStr(TupleDescAttr(tupdesc, varattno - 1)->attname);
-			*value = TextDatumGetCString(((Const *) right)->constvalue);
+			pg_value = TextDatumGetCString(((Const *) right)->constvalue);
+			*value = pg_text_value_to_redis_text(pg_value);
 
 			/*
 			 * We can push down this qual if: - The operatory is TEXTEQ - The
@@ -1709,7 +1713,7 @@ process_redis_array(redisReply *reply, redis_table_type type)
 					}
 					*crs++ = '"';
 					*crs = '\0';
-					appendStringInfoString(res, buff);
+					appendStringInfoString(res, redis_text_value_to_pg_db_encoding(buff));
 					pfree(buff);
 				}
 				break;
@@ -2988,4 +2992,24 @@ Datum
 redis_fdw_hiredis_version(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_INT32(HIREDIS_MAJOR * 10000 + HIREDIS_MINOR * 100 + HIREDIS_PATCH);
+}
+
+/*
+ * Convert a text value from PostgreSQL database with an encoding to Redis value which is always UTF8
+ */
+static const char *
+pg_text_value_to_redis_text(const char * pg_text_value)
+{
+	int pg_database_encoding = GetDatabaseEncoding(); /* very fast call, see PostgreSQL mbutils.c */
+	return (pg_database_encoding == PG_UTF8) ? pg_text_value : (char *) pg_do_encoding_conversion((unsigned char *) pg_text_value, strlen(pg_text_value),  pg_database_encoding, PG_UTF8);
+}
+
+/*
+ * Convert a Redis text value which is always UTF8 to PostgreSQL database encoding
+ */
+static char *
+redis_text_value_to_pg_db_encoding(const char * redis_text)
+{
+	int pg_database_encoding = GetDatabaseEncoding(); /* very fast call, see PostgreSQL mbutils.c */
+	return (pg_database_encoding == PG_UTF8) ? redis_text : (char *) pg_do_encoding_conversion((unsigned char *) pg_text_value, strlen(redis_text), PG_UTF8, pg_database_encoding);
 }
