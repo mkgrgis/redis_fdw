@@ -28,8 +28,7 @@ GISTEST=nogis
 endif
 
 ifndef REGRESS
-REGRESS = redis_fdw $(GISTEST)
-#encodings # future test modules
+REGRESS = redis_fdw $(GISTEST) encodings
 endif
 
 REGRESS_OPTS = --encoding=utf8 --inputdir=test --outputdir=test
