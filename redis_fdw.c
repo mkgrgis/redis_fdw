@@ -3011,5 +3011,5 @@ static char *
 redis_text_value_to_pg_db_encoding(const char * redis_text)
 {
 	int pg_database_encoding = GetDatabaseEncoding(); /* very fast call, see PostgreSQL mbutils.c */
-	return (pg_database_encoding == PG_UTF8) ? redis_text : (char *) pg_do_encoding_conversion((unsigned char *) pg_text_value, strlen(redis_text), PG_UTF8, pg_database_encoding);
+	return (pg_database_encoding == PG_UTF8) ? redis_text : (char *) pg_do_encoding_conversion((unsigned char *) redis_text, strlen(redis_text), PG_UTF8, pg_database_encoding);
 }
