@@ -271,7 +271,7 @@ static void redisGetQual(Node *node, TupleDesc tupdesc, char **key,
 static char *process_redis_array(redisReply *reply, redis_table_type type);
 static void check_reply(redisReply *reply, redisContext *context,
 						int error_code, char *message, char *arg);
-static char * pg_text_value_to_redis_text(const char * pg_text_value);
+static const char * pg_text_value_to_redis_text(const char * pg_text_value);
 static char * redis_text_value_to_pg_db_encoding(const char * redis_text);
 
 /*
@@ -2997,7 +2997,7 @@ redis_fdw_hiredis_version(PG_FUNCTION_ARGS)
 /*
  * Convert a text value from PostgreSQL database with an encoding to Redis value which is always UTF8
  */
-static char *
+static const char *
 pg_text_value_to_redis_text(const char * pg_text_value)
 {
 	int pg_database_encoding = GetDatabaseEncoding(); /* very fast call, see PostgreSQL mbutils.c */
